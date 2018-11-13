@@ -12,7 +12,6 @@ import sys
 import csv
 import time
 import json
-import sched
 import argparse
 import datetime
 import numpy as np
@@ -20,13 +19,15 @@ import numpy as np
 from installationRegion import TwoSidedInstall
 
 #####################################################################
+intervaloVideos = 2
+periodoGuardadoInformacionEnSegundos = 20
+
 
 keep_processing = True 
 factorAlgoritmo = 2
 
-schedule = sched.scheduler(time.time,time.sleep)
 contadorDeAgenda = 0
-intervaloVideos = 30
+
 
 # parse command line arguments for camera ID or video file
 
@@ -34,7 +35,8 @@ parser = argparse.ArgumentParser(description='Perform ' + sys.argv[0] + ' Instal
 parser.add_argument("-c", "--camera_being_use", type=int, help="specify camera to use", default=0)
 parser.add_argument("-l", "--location", type=int, help="Factor for resolution", default=1)
 parser.add_argument("-r", "--resolution_factor", type=int, help="Factor for resolution", default=2)
-parser.add_argument("-d", "--drawing", type=bool, help="Factor for resolution", default=False)
+parser.add_argument("-d", "--drawing", type=bool, help="Dibujar", default=False)
+parser.add_argument("-s", "--showImage", type=bool, help="Mostrar", default=False)
 parser.add_argument('video_file', metavar='video_file', type=str, nargs='?', help='specify optional video file')
 args = parser.parse_args()
 
@@ -44,20 +46,13 @@ passing_down = 0
 conteoActual = 0
 csvName = './'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S')+'_{}.csv'.format(args.location)
 
-fields=['datetime','in','out','total','flow']
-with open(csvName, 'rb') as csvFile:
-    writer = csv.writer(csvFile)
-    writer.writerow(fields)
+with open(csvName, 'w') as csvFile:
+    writer = csv.writer(csvFile, delimiter=';',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(['datetime','in','out','total','flow'])
 
 contadorManual = 0
 
 historial = []
-
-with open('./calibration.json') as f:
-    jsonFile = json.load(f)
-    calibration = jsonFile['calibration']
-    function = jsonFile['function']
-print('Introduced calibration: ',calibration)
 
 lastValue = 0
 
@@ -72,20 +67,30 @@ print('Working on resolution: ',resolution)
 # draw optic flow visualization on image using a given step size for
 # the line glyphs that show the flow vectors on the image
 
-def guardarInformacion(self,argumento = None):
+def guardarInformacion():
     global writer
     global total_flow
     global passing_up
     global passing_down
     global conteoActual
     global historial
-    global schedule
     global contadorDeAgenda
-    writer.writerow([datetime.datetime.now().strftime('%H%M%S'),passing_up,passing_down,conteoActual,total_flow])
-    contadorDeAgenda +=1
-    if contadorDeAgenda%intervaloVideos == 0:
-        pass
-    s.enter(60, 1, guardarInformacion, (argumento,))
+    with open(csvName, 'a') as csvFile:
+        writer = csv.writer(csvFile, delimiter=';',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow([datetime.datetime.now().strftime('%H%M%S'),passing_up,passing_down,conteoActual,total_flow])
+        contadorDeAgenda +=1
+        if contadorDeAgenda%intervaloVideos == 0:
+            print('Saving video...')
+            guardarVideo(historial)
+        else:
+            del historial
+            historial = []
+            print('Erasing video...')
+
+def guardarVideo():
+    global periodoGuardadoInformacionEnSegundos
+    fps = len(historial)/periodoGuardadoInformacionEnSegundos
+    for frame in historial:
 
 def draw_flow(img, flow, factor = 1,step=4):
     h, w = img.shape[:2]
@@ -125,7 +130,6 @@ def calculateInOutOnFlow(img,flow,myRegion,draw = False,factor = 1,step = 4):
     global passing_up
     global passing_down
     global conteoActual
-    global calibration
     global lastValue
     for (x0,y0) in puntosDeFlujo:
         # Integramos el flujo total
@@ -154,6 +158,7 @@ def calculateInOutOnFlow(img,flow,myRegion,draw = False,factor = 1,step = 4):
 
 if __name__ == '__main__':
     videoAddress = os.getenv('HOME') +'/trafficFlow/trialVideos'
+    tiempoInicial = time.time()
 
     miCamara = cv2.VideoCapture() 
 
@@ -162,6 +167,7 @@ if __name__ == '__main__':
     windowName = "Dense Optic Flow"  # window name
     tiempoAuxiliar = time.time()
     miRegion = TwoSidedInstall()
+    calibration = miRegion.calibration
 
     # if command line arguments are provided try to read video_name
     # otherwise default to capture from attached H/W camera
@@ -171,7 +177,7 @@ if __name__ == '__main__':
 
         # create window by name (as resizable)
 
-        cv2.namedWindow(windowName, cv2.WINDOW_NORMAL) 
+        #cv2.namedWindow(windowName, cv2.WINDOW_NORMAL) 
 
         # if video file successfully open then read an initial frame from video
 
@@ -189,6 +195,7 @@ if __name__ == '__main__':
         prevgray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         algImg = cv2.resize(prevgray, (prevgray.shape[1]//factorAlgoritmo,prevgray.shape[0]//factorAlgoritmo))
         actualizarPuntosDeFlujo(frame,miRegion)
+
 
         while (keep_processing):
             tiempoAuxiliar = time.time()
@@ -218,8 +225,12 @@ if __name__ == '__main__':
 
             # display image with optic flow overlay
             #cv2.imshow(windowName, draw_flow(algImg, flow,factor=1))        #factorAlgoritmo
+
+            imagen = calculateInOutOnFlow(gray, flow, miRegion,draw = args.drawing)
+            historial.append(imagen)
             
-            cv2.imshow(windowName,calculateInOutOnFlow(gray, flow, miRegion,draw = args.drawing))
+            if args.showImage:
+                cv2.imshow(windowName,imagen)
 
             # start the event loop - essential
 
@@ -232,6 +243,10 @@ if __name__ == '__main__':
             ch = cv2.waitKey(1) & 0xFF  # wait 40ms (i.e. 1000ms / 25 fps = 40 ms)
 
             # It can also be set to detect specific key strokes by recording which key is pressed
+
+            if time.time() - tiempoInicial > periodoGuardadoInformacionEnSegundos:
+                guardarInformacion()
+                tiempoInicial = time.time()
 
             if (ch == ord('q')):
                 keep_processing = False 
@@ -249,8 +264,8 @@ if __name__ == '__main__':
                 calibration = total_flow/conteoActual
                 passing_up = conteoActual
                 passing_down = 0
-                with open('calibration.json', 'w') as file:
-                    json.dump({'calibration':calibration}, file)
+                miRegion.updateCalibration(calibration)
+                print('Guardando: ',calibration)
                 
             if (ch == ord('f')):
                 cv2.setWindowProperty(windowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) 

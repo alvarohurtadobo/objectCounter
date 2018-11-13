@@ -117,11 +117,11 @@ sudo modprobe bcm2835-v4l2
 
 ################START########################
 echo "Running at Boot"
-cd /home/pi/trafficFlow/people-counter-tflite/
+cd /home/pi/trafficFlow/objectCounter/
 
 echo "starting People counter..."
 echo "Hi, I'm trying to run the script..."
-command_rc=python3 people_counter.py
+command_rc=python3 objectCounter.py
 if [[ $command_rc -ne 0 ]]; then
         echo 'command was successful'
 else
@@ -132,7 +132,7 @@ else
 	sudo killall -9 python3
 	echo 'starting Second try to run python script'
         today=`date '+%Y%m%d_%H%M'`;
-        nohup python3 people_counter.py >> $today.txt 2>&1&
+        nohup python3 objectCounter.py >> $today.txt 2>&1&
 	echo 'It Works! its running in background..., checklog with  nano fullLog.log'
 	echo 'or state and running time with command  ps ax | grep python3  in terminal'
 fi

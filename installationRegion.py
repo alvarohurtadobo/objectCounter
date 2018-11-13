@@ -36,15 +36,17 @@ import numpy as np
 
 parser = argparse.ArgumentParser(description='Perform ' + sys.argv[0] + ' Installation for people/object counter')
 parser.add_argument("-c", "--camera_being_use", type=int, help="specify camera to use", default=0)
+parser.add_argument("-l", "--location", type=int, help="Factor for resolution", default=1)
 parser.add_argument("-r", "--resolution_factor", type=int, help="Factor for resolution", default=2)
-parser.add_argument("-d", "--drawing", type=bool, help="Factor for resolution", default=False)
+parser.add_argument("-d", "--drawing", type=bool, help="Dibujar", default=False)
+parser.add_argument("-s", "--showImage", type=bool, help="Mostrar", default=False)
 parser.add_argument('video_file', metavar='video_file', type=str, nargs='?', help='specify optional video file')
 args = parser.parse_args()
 
 px = 0
 py = 0
 flowFrame = np.zeros((320,240,3), np.uint8)
-puntos = {'region': [], 'arriba': False,'vector':[1,1]}
+puntos = {'region': [], 'arriba': False,'vector':[1,1],'calibration':10000,'function': []}
 
 lugarEnJSON = 'region'
 if args.resolution_factor != None:
@@ -67,15 +69,21 @@ estado = 0
 
 class TwoSidedInstall():
     def __init__(self):
-        self.myJsonData = {'region': [], 'arriba': False,'vector':[1,1]}
+        self.myJsonData = {'region': [], 'arriba': False,'vector':[1,1],'calibration':10000,'function':[]}
         self.saludable = True
         self.vectorUnitario = np.array((1,1))
+        self.calibration = None
+        self.function = None
         try:
-            with open('./datos.json') as f:
+            with open('./datos_{}.json'.format(args.location)) as f:
+                print('Recuperando Location {}'.format(args.location))
                 self.myJsonData = json.load(f)
+                self.calibration = self.myJsonData['calibration']
+                self.function = self.myJsonData['function']
                 self.saludable = True
                 vectorDireccion = np.array(self.myJsonData['region'][0])-np.array(self.myJsonData['region'][1])
                 self.vectorUnitario = vectorDireccion/math.sqrt(vectorDireccion[1]**2+vectorDireccion[0]**2)
+                print('Cargado exitosamente: ',self.myJsonData)
         except:
             self.saludable = False
             print('Could not find a json file')
@@ -109,6 +117,13 @@ class TwoSidedInstall():
         except Exception as e:
             print('Is something bad with the poly ', str(e))
         return False
+
+    def updateCalibration(self,calibration):
+        self.myJsonData['calibration'] = calibration
+        with open('./datos_{}.json'.format(args.location), 'w') as file:
+            json.dump(self.myJsonData, file)
+        print('Actualizado: ',self.myJsonData)
+
 
 # Repeated function, take care
 def isInside(xTest,yTest):
@@ -190,8 +205,9 @@ def introducirLinea(event,x,y,flags,param):
         return x,y
 
 if __name__ == '__main__':
+    print('Instalando Location {}'.format(args.location))
     videoAddress = os.getenv('HOME') +'/trafficFlow/trialVideos'
-    jsonToWrite = './datos.json'
+    jsonToWrite = './datos_{}.json'.format(args.location)
 
     miCamara = cv2.VideoCapture()
     windowName = 'Installation'
@@ -224,6 +240,13 @@ if __name__ == '__main__':
 
         ch = 0xFF & cv2.waitKey(20)
         if ch == ord('s'):
+            try:
+                with open('./datos_{}.json'.format(args.location)) as f:
+                    lastData = json.load(f)
+                    puntos['calibration'] = lastData['calibration']
+                    print('Rescate previa instalacion')
+            except:
+                print('No previous file found')
             with open(jsonToWrite, 'w') as file:
                 json.dump(puntos, file)
             print('Guardado Exitosamente: ',puntos)
