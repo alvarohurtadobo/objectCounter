@@ -12,6 +12,7 @@ import sys
 import csv
 import time
 import json
+import psutil
 import argparse
 import datetime
 import numpy as np
@@ -94,10 +95,19 @@ def guardarInformacion():
         if contadorDeAgenda%intervaloVideos == 0:
             print('Saving video with {} frames'.format(len(historial)))
             guardarVideo(idItem,historial)
+            with open('./output/{}.txt'.format(idItem),"w+") as texFile:
+                texFile.write('Passed Up: {}%d\r\n'.format(passing_up-last_passing_up))
+                texFile.write('Passed Up: {}%d\r\n'.format(passing_down-last_passing_down))
+                texFile.write('Passed Up: {}%d\r\n'.format(conteoActual-last_conteoActual))
+                texFile.write('Passed Up: {}%d\r\n'.format(total_flow-last_total_flow))
         else:
             del historial
             historial = []
             print('Erasing video...')
+    last_passing_up = passing_up
+    last_passing_down = passing_down
+    last_conteoActual = conteoActual
+    last_total_flow = total_flow
 
 def guardarVideo(paraNombre,historial):
     global fourcc
@@ -271,6 +281,12 @@ if __name__ == '__main__':
             ch = cv2.waitKey(1) & 0xFF  # wait 40ms (i.e. 1000ms / 25 fps = 40 ms)
 
             # It can also be set to detect specific key strokes by recording which key is pressed
+
+            porcentajeDeMemoria = psutil.virtual_memory()[2]
+
+            if (porcentajeDeMemoria > 95):
+                print('Estado de Memoria en riesgo: '+str(porcentajeDeMemoria)+'/100')
+                os.system('sudo reboot')
 
             if time.time() - tiempoInicial > periodoGuardadoInformacionEnSegundos:
                 guardarInformacion()
