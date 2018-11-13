@@ -9,8 +9,12 @@ git config --global user.password "your password"
 import os
 import cv2
 import sys
+import csv
 import time
+import json
+import sched
 import argparse
+import datetime
 import numpy as np
 
 from installationRegion import TwoSidedInstall
@@ -20,35 +24,68 @@ from installationRegion import TwoSidedInstall
 keep_processing = True 
 factorAlgoritmo = 2
 
+schedule = sched.scheduler(time.time,time.sleep)
+contadorDeAgenda = 0
+intervaloVideos = 30
+
 # parse command line arguments for camera ID or video file
 
-parser = argparse.ArgumentParser(description='Perform ' + sys.argv[0] + ' example operation on incoming camera/video image')
+parser = argparse.ArgumentParser(description='Perform ' + sys.argv[0] + ' Installation for people/object counter')
 parser.add_argument("-c", "--camera_being_use", type=int, help="specify camera to use", default=0)
-parser.add_argument("-f", "--calibration_Input", type=int, help="Factor for calibration", default=10000)
-parser.add_argument("-r", "--resolution_Factor", type=int, help="Factor for resolution", default=2)
+parser.add_argument("-l", "--location", type=int, help="Factor for resolution", default=1)
+parser.add_argument("-r", "--resolution_factor", type=int, help="Factor for resolution", default=2)
+parser.add_argument("-d", "--drawing", type=bool, help="Factor for resolution", default=False)
 parser.add_argument('video_file', metavar='video_file', type=str, nargs='?', help='specify optional video file')
 args = parser.parse_args()
 
 total_flow = 0
 passing_up = 0
 passing_down = 0
+conteoActual = 0
+csvName = './'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S')+'_{}.csv'.format(args.location)
 
-calibration = int(args.calibrationInput)
+fields=['datetime','in','out','total','flow']
+with open(csvName, 'rb') as csvFile:
+    writer = csv.writer(csvFile)
+    writer.writerow(fields)
+
+contadorManual = 0
+
+historial = []
+
+with open('./calibration.json') as f:
+    jsonFile = json.load(f)
+    calibration = jsonFile['calibration']
+    function = jsonFile['function']
 print('Introduced calibration: ',calibration)
 
 lastValue = 0
 
 puntosDeFlujo = []
 
-resolution = (160*args.resolutionFactor,120*args.resolutionFactor)
+resolution = (160*args.resolution_factor,120*args.resolution_factor)
 #resolution = (320,240)
 
 print('Working on resolution: ',resolution)
 
 #####################################################################
-
 # draw optic flow visualization on image using a given step size for
 # the line glyphs that show the flow vectors on the image
+
+def guardarInformacion(self,argumento = None):
+    global writer
+    global total_flow
+    global passing_up
+    global passing_down
+    global conteoActual
+    global historial
+    global schedule
+    global contadorDeAgenda
+    writer.writerow([datetime.datetime.now().strftime('%H%M%S'),passing_up,passing_down,conteoActual,total_flow])
+    contadorDeAgenda +=1
+    if contadorDeAgenda%intervaloVideos == 0:
+        pass
+    s.enter(60, 1, guardarInformacion, (argumento,))
 
 def draw_flow(img, flow, factor = 1,step=4):
     h, w = img.shape[:2]
@@ -71,29 +108,36 @@ def actualizarPuntosDeFlujo(img,myRegion,step = 4):
     xMax = 0
     yMax = 0
     print('Region: ')
+    puntosAdentro = 0
     for (x0,y0) in zip(x,y):
         if myRegion.isInside(x0,y0):
             puntosDeFlujo.append((x0,y0))
-            print((x0,y0))
+            puntosAdentro += 1
             if x0 > xMax:
                 xMax = x0
             if y0 > yMax:
                 yMax = y0
-        else:
-            #print('Not in: ',(x0,y0))
-            pass
-    print('Max: ', xMax, yMax)
 
-def drawVelocity(img,flow,myRegion,factor = 1,step = 4):
+    print('Max: ', xMax, yMax,' in ', puntosAdentro, ' points inside')
+
+def calculateInOutOnFlow(img,flow,myRegion,draw = False,factor = 1,step = 4):
     global total_flow
     global passing_up
     global passing_down
+    global conteoActual
     global calibration
     global lastValue
     for (x0,y0) in puntosDeFlujo:
-        cv2.circle(img, (x0, y0), 1,(0,0,0) , -1)
         # Integramos el flujo total
-        total_flow += int(myRegion.proyectarVector(flow[y0//2][x0//2][0],flow[y0//2][x0//2][1]))
+        velocidad = myRegion.proyectarVector(flow[y0//2][x0//2][0],flow[y0//2][x0//2][1])
+        total_flow += int(velocidad)
+        if draw:
+            color = velocidad*100
+            #print(color)
+            if color > 10:
+                if color > 255:
+                    color = 255
+                cv2.circle(img, (x0, y0), 1,color , -1)
         conteoActual = int(total_flow/calibration)
         if conteoActual != lastValue:
             if conteoActual > lastValue:
@@ -101,7 +145,7 @@ def drawVelocity(img,flow,myRegion,factor = 1,step = 4):
             else:
                 passing_down += (lastValue-conteoActual)
             lastValue = conteoActual
-            print('Pasaron: ',passing_up,', retrocedieron: ',passing_down,', flujo total: ',total_flow)
+            print('Flujo total: ',conteoActual,', \t\tpasaron: ',passing_up,', \tretrocedieron: ',passing_down)
     return img
 
 #####################################################################
@@ -174,7 +218,8 @@ if __name__ == '__main__':
 
             # display image with optic flow overlay
             #cv2.imshow(windowName, draw_flow(algImg, flow,factor=1))        #factorAlgoritmo
-            cv2.imshow(windowName,drawVelocity(gray, flow, miRegion))
+            
+            cv2.imshow(windowName,calculateInOutOnFlow(gray, flow, miRegion,draw = args.drawing))
 
             # start the event loop - essential
 
@@ -184,13 +229,30 @@ if __name__ == '__main__':
             # If 0 is passed, it waits indefinitely for a key stroke.
             # (bitwise and with 0xFF to extract least significant byte of multi-byte response)
 
-            key = cv2.waitKey(1) & 0xFF  # wait 40ms (i.e. 1000ms / 25 fps = 40 ms)
+            ch = cv2.waitKey(1) & 0xFF  # wait 40ms (i.e. 1000ms / 25 fps = 40 ms)
 
             # It can also be set to detect specific key strokes by recording which key is pressed
 
-            if (key == ord('q')):
+            if (ch == ord('q')):
                 keep_processing = False 
-            elif (key == ord('f')):
+            if (ch == ord('+')):
+                contadorManual +=1
+                print('Contador Manual: ',contadorManual)
+            if (ch == ord('*')):
+                contadorManual +=10
+                print('Contador Manual: ',contadorManual)
+            if (ch == ord('-')):
+                contadorManual -=1
+                print('Contador Manual: ',contadorManual)
+            if ch == ord('r'):
+                conteoActual = contadorManual
+                calibration = total_flow/conteoActual
+                passing_up = conteoActual
+                passing_down = 0
+                with open('calibration.json', 'w') as file:
+                    json.dump({'calibration':calibration}, file)
+                
+            if (ch == ord('f')):
                 cv2.setWindowProperty(windowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) 
 
         # close all windows

@@ -35,8 +35,9 @@ import numpy as np
 # By default the ingreso is the web cam
 
 parser = argparse.ArgumentParser(description='Perform ' + sys.argv[0] + ' Installation for people/object counter')
-parser.add_argument("-c", "--camera_to_use", type=int, help="specify camera to use", default=0)
-parser.add_argument("-r", "--resolutionFactor", type=int, help="Factor for resolution", default=2)
+parser.add_argument("-c", "--camera_being_use", type=int, help="specify camera to use", default=0)
+parser.add_argument("-r", "--resolution_factor", type=int, help="Factor for resolution", default=2)
+parser.add_argument("-d", "--drawing", type=bool, help="Factor for resolution", default=False)
 parser.add_argument('video_file', metavar='video_file', type=str, nargs='?', help='specify optional video file')
 args = parser.parse_args()
 
@@ -46,12 +47,12 @@ flowFrame = np.zeros((320,240,3), np.uint8)
 puntos = {'region': [], 'arriba': False,'vector':[1,1]}
 
 lugarEnJSON = 'region'
-if args.resolutionFactor != None:
-    resolution = (160*args.resolutionFactor,120*args.resolutionFactor)
-    rango = int(40/args.resolutionFactor)
+if args.resolution_factor != None:
+    resolution = (160*args.resolution_factor,120*args.resolution_factor)
+    rango = int(40/args.resolution_factor)
 else:
     resolution=(160,120)
-    rango = int(40/args.resolutionFactor)
+    rango = int(40/args.resolution_factor)
 
 dim = 1
 
