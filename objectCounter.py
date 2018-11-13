@@ -211,7 +211,7 @@ if __name__ == '__main__':
     # otherwise default to capture from attached H/W camera
 
     if (((args.video_file) and (miCamara.open(videoAddress+'/'+str(args.video_file))))
-        or (miCamara.open(args.camera_to_use))):
+        or (miCamara.open(args.camera_being_use))):
 
         # create window by name (as resizable)
 
