@@ -212,7 +212,7 @@ if __name__ == '__main__':
     miCamara = cv2.VideoCapture()
     windowName = 'Installation'
     if (((args.video_file) and (miCamara.open(videoAddress+'/'+str(args.video_file))))
-        or (miCamara.open(args.camera_to_use))):
+        or (miCamara.open(args.camera_being_use))):
         cv2.namedWindow(windowName, cv2.WINDOW_NORMAL)
         if (miCamara.isOpened):
             miCamara.set(3,resolution[0])
