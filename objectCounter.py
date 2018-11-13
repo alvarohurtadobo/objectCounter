@@ -182,7 +182,10 @@ def calculateInOutOnFlow(img,flow,myRegion,draw = False,factor = 1,step = 4):
                 if color > 255:
                     color = 255
                 cv2.circle(img, (x0, y0), 1,color , -1)
-        conteoActual = int(total_flow/calibration)
+        if calibration !=0:
+            conteoActual = int(total_flow/calibration)
+        else:
+            conteoActual = 0
         if conteoActual != lastValue:
             if conteoActual > lastValue:
                 passing_up += (conteoActual-lastValue)
