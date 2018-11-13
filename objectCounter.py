@@ -20,7 +20,7 @@ from installationRegion import TwoSidedInstall
 
 #####################################################################
 intervaloVideos = 2
-periodoGuardadoInformacionEnSegundos = 20
+periodoGuardadoInformacionEnSegundos = 5
 
 
 keep_processing = True 
@@ -40,10 +40,17 @@ parser.add_argument("-s", "--showImage", type=bool, help="Mostrar", default=Fals
 parser.add_argument('video_file', metavar='video_file', type=str, nargs='?', help='specify optional video file')
 args = parser.parse_args()
 
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+
 total_flow = 0
 passing_up = 0
 passing_down = 0
 conteoActual = 0
+
+last_total_flow = 0
+last_passing_up = 0
+last_passing_down = 0
+last_conteoActual = 0
 csvName = './'+datetime.datetime.now().strftime('%Y%m%d_%H%M%S')+'_{}.csv'.format(args.location)
 
 with open(csvName, 'w') as csvFile:
@@ -75,22 +82,43 @@ def guardarInformacion():
     global conteoActual
     global historial
     global contadorDeAgenda
+    global last_passing_up
+    global last_passing_down
+    global last_conteoActual
+    global last_total_flow
     with open(csvName, 'a') as csvFile:
         writer = csv.writer(csvFile, delimiter=';',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow([datetime.datetime.now().strftime('%H%M%S'),passing_up,passing_down,conteoActual,total_flow])
+        idItem = datetime.datetime.now().strftime('%H%M%S')
+        writer.writerow([idItem,passing_up,passing_down,conteoActual,total_flow])
         contadorDeAgenda +=1
         if contadorDeAgenda%intervaloVideos == 0:
-            print('Saving video...')
-            guardarVideo(historial)
+            print('Saving video with {} frames'.format(len(historial)))
+            guardarVideo(idItem,historial)
         else:
             del historial
             historial = []
             print('Erasing video...')
 
-def guardarVideo():
+def guardarVideo(paraNombre,historial):
+    global fourcc
     global periodoGuardadoInformacionEnSegundos
-    fps = len(historial)/periodoGuardadoInformacionEnSegundos
+    fps = int(len(historial)/periodoGuardadoInformacionEnSegundos//5)*5
+    #print('FPS: ',fps)
+    if fps>30:
+        fps=30
+    print(fps)
+    nombreVideo = './output/{}.avi'.format(paraNombre)
+    
+    aEntregar = cv2.VideoWriter(nombreVideo,fourcc, fps,(resolution[0],resolution[1]))
+    contadorVide = 0
     for frame in historial:
+        aEntregar.write(frame) 
+        cv2.imwrite('./output/{}_{}.jpg'.format(paraNombre,contadorVide),frame)
+        contadorVide +=1
+    aEntregar.release()
+    os.system('ffmpeg -i {} {}.mp4'.format(nombreVideo,nombreVideo[:-4]))
+    os.system('rm {}'.format(nombreVideo))
+    #print('Erased '+nombreVideo)
 
 def draw_flow(img, flow, factor = 1,step=4):
     h, w = img.shape[:2]
@@ -227,7 +255,7 @@ if __name__ == '__main__':
             #cv2.imshow(windowName, draw_flow(algImg, flow,factor=1))        #factorAlgoritmo
 
             imagen = calculateInOutOnFlow(gray, flow, miRegion,draw = args.drawing)
-            historial.append(imagen)
+            historial.append(frame)
             
             if args.showImage:
                 cv2.imshow(windowName,imagen)
