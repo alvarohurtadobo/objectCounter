@@ -311,6 +311,8 @@ if __name__ == '__main__':
             if ch == ord('r'):
                 conteoActual = contadorManual
                 calibration = total_flow/conteoActual
+                if calibration == 0:
+                    calibration = 1
                 passing_up = conteoActual
                 passing_down = 0
                 miRegion.updateCalibration(calibration)
