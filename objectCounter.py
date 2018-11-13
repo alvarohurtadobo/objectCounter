@@ -95,6 +95,8 @@ def guardarInformacion():
         if contadorDeAgenda%intervaloVideos == 0:
             print('Saving video with {} frames'.format(len(historial)))
             guardarVideo(idItem,historial)
+            if not os.path.exists('./output/'):
+                os.makedirs('./output/')
             with open('./output/{}.txt'.format(idItem),"w+") as texFile:
                 texFile.write('Passed Up: {}%d\r\n'.format(passing_up-last_passing_up))
                 texFile.write('Passed Up: {}%d\r\n'.format(passing_down-last_passing_down))
