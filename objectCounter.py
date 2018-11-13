@@ -120,14 +120,14 @@ def guardarVideo(paraNombre,historial):
     nombreVideo = './output/{}.avi'.format(paraNombre)
     
     aEntregar = cv2.VideoWriter(nombreVideo,fourcc, fps,(resolution[0],resolution[1]))
-    contadorVide = 0
+    #contadorVide = 0
     for frame in historial:
         aEntregar.write(frame) 
-        cv2.imwrite('./output/{}_{}.jpg'.format(paraNombre,contadorVide),frame)
-        contadorVide +=1
+        #cv2.imwrite('./output/{}_{}.jpg'.format(paraNombre,contadorVide),frame)
+        #contadorVide +=1
     aEntregar.release()
-    os.system('ffmpeg -i {} {}.mp4'.format(nombreVideo,nombreVideo[:-4]))
-    os.system('rm {}'.format(nombreVideo))
+    #os.system('ffmpeg -i {} {}.mp4'.format(nombreVideo,nombreVideo[:-4]))
+    #os.system('rm {}'.format(nombreVideo))
     #print('Erased '+nombreVideo)
 
 def draw_flow(img, flow, factor = 1,step=4):
