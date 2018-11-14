@@ -89,7 +89,7 @@ def guardarInformacion():
     global last_total_flow
     with open(csvName, 'a') as csvFile:
         writer = csv.writer(csvFile, delimiter=';',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        idItem = datetime.datetime.now().strftime('%H%M%S')
+        idItem = datetime.datetime.now().strftime('%d_%H%M%S')
         writer.writerow([idItem,passing_up,passing_down,conteoActual,total_flow])
         contadorDeAgenda +=1
         if contadorDeAgenda%intervaloVideos == 0:
@@ -99,9 +99,9 @@ def guardarInformacion():
                 os.makedirs('./output/')
             with open('./output/{}.txt'.format(idItem),"w+") as texFile:
                 texFile.write('Passed Up: {}%d\r\n'.format(passing_up-last_passing_up))
-                texFile.write('Passed Up: {}%d\r\n'.format(passing_down-last_passing_down))
-                texFile.write('Passed Up: {}%d\r\n'.format(conteoActual-last_conteoActual))
-                texFile.write('Passed Up: {}%d\r\n'.format(total_flow-last_total_flow))
+                texFile.write('Passed Down: {}%d\r\n'.format(passing_down-last_passing_down))
+                texFile.write('Passed Total: {}%d\r\n'.format(conteoActual-last_conteoActual))
+                texFile.write('Raw Flow: {}%d\r\n'.format(total_flow-last_total_flow))
         else:
             del historial
             historial = []
