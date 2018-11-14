@@ -31,6 +31,7 @@ import json
 import math
 import argparse
 import numpy as np
+from imutils.video import VideoStream
 
 # By default the ingreso is the web cam
 
@@ -209,19 +210,18 @@ if __name__ == '__main__':
     videoAddress = os.getenv('HOME') +'/trafficFlow/trialVideos'
     jsonToWrite = './datos_{}.json'.format(args.location)
 
-    miCamara = cv2.VideoCapture()
+    miCamara = VideoStream(usePiCamera=True, resolution=(3280, 2464)).start()
     windowName = 'Installation'
-    if (((args.video_file) and (miCamara.open(videoAddress+'/'+str(args.video_file))))
-        or (miCamara.open(args.camera_being_use))):
+    if args.camera_being_use == 1:
         cv2.namedWindow(windowName, cv2.WINDOW_NORMAL)
-        if (miCamara.isOpened):
-            miCamara.set(3,resolution[0])
-            miCamara.set(4,resolution[1])
-            ret, frame = miCamara.read() 
-            for i in range(20):
-                succesfullyRead, flowFrame = miCamara.read()
-            if args.video_file:
-                flowFrame = cv2.resize(flowFrame,resolution)
+        if True:
+            #miCamara.set(3,resolution[0])
+            #miCamara.set(4,resolution[1])
+            flowFrame = miCamara.read() 
+            #for i in range(20):
+            #    succesfullyRead, flowFrame = miCamara.read()
+            #if args.video_file:
+            flowFrame = cv2.resize(flowFrame,resolution)
         else:
             print('Opturador no abierto')
     else:
