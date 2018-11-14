@@ -20,7 +20,7 @@ import numpy as np
 from installationRegion import TwoSidedInstall
 
 #####################################################################
-intervaloVideos = 30
+intervaloVideos = 20
 periodoGuardadoInformacionEnSegundos = 60
 
 
