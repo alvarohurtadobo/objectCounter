@@ -16,8 +16,10 @@ import psutil
 import argparse
 import datetime
 import numpy as np
-
+import imutils
 from installationRegion import TwoSidedInstall
+from imutils.video import VideoStream
+from imutils.video import FPS
 
 #####################################################################
 intervaloVideos = 20
@@ -203,7 +205,11 @@ if __name__ == '__main__':
     videoAddress = os.getenv('HOME') +'/trafficFlow/trialVideos'
     tiempoInicial = time.time()
 
-    miCamara = cv2.VideoCapture() 
+    if args.camera_being_use == 1:
+        miCamara  = VideoStream(usePiCamera=True).start()
+        time.sleep(2.0)
+    else:
+        miCamara = cv2.VideoCapture(1) 
 
     # define display window name
 
@@ -215,8 +221,7 @@ if __name__ == '__main__':
     # if command line arguments are provided try to read video_name
     # otherwise default to capture from attached H/W camera
 
-    if (((args.video_file) and (miCamara.open(videoAddress+'/'+str(args.video_file))))
-        or (miCamara.open(args.camera_being_use))):
+    if args.camera_being_use == 1:
 
         # create window by name (as resizable)
 
@@ -224,12 +229,13 @@ if __name__ == '__main__':
 
         # if video file successfully open then read an initial frame from video
 
-        if (miCamara.isOpened):
-            miCamara.set(3,resolution[0])
-            miCamara.set(4,resolution[1])
-            ret, frame = miCamara.read() 
-            for i in range(20):
-                succesfullyRead, frame = miCamara.read()
+        if True:
+            # miCamara.set(3,resolution[0])
+            #miCamara.set(4,resolution[1])
+            frame = miCamara.read()        
+            frame = cv2.resize(frame, resolution)
+            #for i in range(20):
+            #    frame = miCamara.read()
             if args.video_file:
                 frame = cv2.resize(frame,resolution)
 
@@ -243,15 +249,15 @@ if __name__ == '__main__':
         while (keep_processing):
             tiempoAuxiliar = time.time()
             # if video file successfully open then read frame from video
-            if (miCamara.isOpened):
-                ret, frame = miCamara.read() 
-                if args.video_file:
-                    frame = cv2.resize(frame,resolution)
+            if True:
+                frame = miCamara.read() 
+                #if args.video_file:
+                frame = cv2.resize(frame,resolution)
 
                 # when we reach the end of the video (file) exit cleanly
-                if (ret == 0):
-                    keep_processing = False 
-                    continue 
+                #if (ret == 0):
+                #keep_processing = False 
+                #    continue 
 
             # convert image to grayscale
 
