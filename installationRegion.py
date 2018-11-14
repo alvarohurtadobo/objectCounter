@@ -32,7 +32,7 @@ import math
 import argparse
 import numpy as np
 from imutils.video import VideoStream
-
+import time
 # By default the ingreso is the web cam
 
 parser = argparse.ArgumentParser(description='Perform ' + sys.argv[0] + ' Installation for people/object counter')
@@ -210,14 +210,16 @@ if __name__ == '__main__':
     videoAddress = os.getenv('HOME') +'/trafficFlow/trialVideos'
     jsonToWrite = './datos_{}.json'.format(args.location)
 
-    miCamara = VideoStream(usePiCamera=True, resolution=(3280, 2464)).start()
+    miCamara = VideoStream(usePiCamera=True, resolution=(1640, 922)).start()
+    time.sleep(2.0)
     windowName = 'Installation'
     if args.camera_being_use == 1:
         cv2.namedWindow(windowName, cv2.WINDOW_NORMAL)
         if True:
             #miCamara.set(3,resolution[0])
             #miCamara.set(4,resolution[1])
-            flowFrame = miCamara.read() 
+            for index in range(30):
+            	flowFrame = miCamara.read() 
             #for i in range(20):
             #    succesfullyRead, flowFrame = miCamara.read()
             #if args.video_file:

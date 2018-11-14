@@ -206,7 +206,7 @@ if __name__ == '__main__':
     tiempoInicial = time.time()
 
     if args.camera_being_use == 1:
-        miCamara  = VideoStream(usePiCamera=True).start()
+        miCamara  = VideoStream(usePiCamera=True, resolution=(1640,922)).start()
         time.sleep(2.0)
     else:
         miCamara = cv2.VideoCapture(1) 
